@@ -11,7 +11,7 @@
 
 - **multica** 是“人 + AI coding agent 共用 issue 工作流”的 **任务管理 / Managed-Agents 平台**：把外部 coding-agent CLI 包装成可被分配 issue、评论触发、自动化触发的“团队成员”，核心价值在**协作编排与运行时治理**。
 - **omnigent** 是面向多种 AI agent 的 **meta-harness（统一运行/会话层）**：在 Claude Code、Codex、Cursor、Pi、OpenAI Agents 等之上提供统一的运行、协作、治理、沙箱与会话能力，核心价值在**跨 harness 的统一会话与多 agent 编排**。
-- 两者**互补而非竞争**：multica 偏“团队任务流 + 调度治理”，omnigent 偏“单机/团队会话运行时 + 多 harness 抽象”。详见对比文档。
+- 两者**主要定位不同、但存在重叠**：multica 偏“团队任务流 + 调度治理”，omnigent 偏“单机/团队会话运行时 + 多 harness 抽象”；在**单机/单用户的本地多 agent 编排**场景下，两者功能确有交叠、存在竞争关系。本研究不把“互补”当作确定结论（置信度见 [docs/40](docs/40-synthesis-and-judgments.md) J1）。详见对比文档。
 
 ## 文档导航
 

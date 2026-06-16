@@ -110,7 +110,7 @@ Autopilot 支持定时 / 手动 / webhook 触发，两种 execution mode：
 
 - 想用多个 agents 放大吞吐、而非手工复制 prompt 到本地 CLI 的小团队。
 - 已使用 Claude Code/Codex/Cursor/Gemini 等 CLI、希望接入 issue board、评论、runtime、skills、autopilot 的开发者。
-- 需要自托管、workspace 隔离、权限、审计、通知、可复用 skill 的团队。
+- 需要自托管、workspace 隔离、权限、可回溯活动历史、通知、可复用 skill 的团队。
 - 需要用 squad 做专家路由的大团队（按主题分派，而非每次手挑具体 agent）。
 
 证据：

@@ -44,7 +44,7 @@ CLI 证据：
 证据：
 
 - `omnigent/runtime/README.md` —— runtime 是 execution engine，给 spec + 用户输入后驱动 LLM、tools、skills、responses；是 library，server 是 primary host。
-- `omnigent/spec/types.py:480`（`ExecutorSpec`：harness/model/auth/context_window/supervisor_tools）、`784`（`ToolsConfig`：agents/builtins/timeout/retry）、`1248`（`PolicySpec`）、`1320`（`GuardrailsSpec`）、`1344`（`AgentSpec`）。
+- `omnigent/spec/types.py`：`ExecutorSpec`（class 定义自 `:480` 起，字段 harness/model/auth/context_window/supervisor_tools 跨多行）、`ToolsConfig`（自 `:784` 起：agents/builtins/timeout/retry）、`PolicySpec`（`:1248` 起）、`GuardrailsSpec`（`:1320` 起）、`AgentSpec`（`:1344` 起）。上述行号为各 class/spec 定义的**起始行**，非单行包含全部字段。
 - `omnigent/runtime/harnesses/__init__.py` —— 注册 `_HARNESS_MODULES`：`claude-sdk`、`claude-native`、`codex-native`、`codex`、`pi`、`pi-native`、`openai-agents`、`cursor`、`antigravity`、`databricks_supervisor`。
 - `omnigent/runtime/harnesses/process_manager.py` —— 一会话一个 harness subprocess，经 Unix socket 暴露 HTTP client，负责 idle reaper、crash/orphan cleanup。
 - `omnigent/runtime/harnesses/_runner.py` —— `python -m` harness 子进程入口（`--harness`、`--module`、`--socket`、`--conversation-id`、`--parent-pid`）。
