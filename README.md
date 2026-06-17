@@ -5,7 +5,7 @@
 - [`multica`](https://github.com/r404r/multica) —— 只读研究对象
 - [`omnigent`](https://github.com/r404r/omnigent) —— 只读研究对象
 
-> 两个研究对象仅作只读调查，研究过程中**未做任何修改、提交或推送**。本仓库是唯一的写入目标。
+> 两个研究对象仅作只读调查，研究过程中**未做任何修改、提交或推送**。本仓库是唯一的写入目标。该约束已固化为 agent 铁则，见 [`AGENTS.md`](AGENTS.md)（AI 灵魂文件）。
 
 ## TL;DR（一句话结论）
 
@@ -23,6 +23,7 @@
 | [docs/30-comparison.md](docs/30-comparison.md) | **并排对比表** + 差异分析 + 各自面向的用户群体 | (a)(c) |
 | [docs/40-synthesis-and-judgments.md](docs/40-synthesis-and-judgments.md) | 综合判断（与原始证据区分标注）+ 待确认项 | 综合 |
 | [docs/90-evidence-index.md](docs/90-evidence-index.md) | Phase 1 证据来源索引（评论 + 关键文件路径清单） | 可追溯 |
+| [docs/omnigent-beginner-guide-zh.md](docs/omnigent-beginner-guide-zh.md) | 面向 IT 零基础用户的 omnigent 使用指南（基于只读研究产出） | 用户指南 |
 
 ## 证据原则
 
