@@ -19,6 +19,7 @@
 | --- | --- | --- |
 | [docs/00-research-scope.md](docs/00-research-scope.md) | 研究背景、范围、方法、只读约束、术语表 | 全局上下文 |
 | [docs/10-multica.md](docs/10-multica.md) | multica 的 Agentic 实现、架构、调度执行链、目标用户 | (a) 实现 |
+| [docs/11-multica-interactive-input.md](docs/11-multica-interactive-input.md) | multica 中交互式 skill 输入的处理方式（评论驱动的异步往返、用户在哪补充信息） | (a) 运行时行为 |
 | [docs/20-omnigent.md](docs/20-omnigent.md) | omnigent 的实现、**主要用法**、**特点**、**解决的现实课题**、目标用户 | (a)(b) |
 | [docs/30-comparison.md](docs/30-comparison.md) | **并排对比表** + 差异分析 + 各自面向的用户群体 | (a)(c) |
 | [docs/40-synthesis-and-judgments.md](docs/40-synthesis-and-judgments.md) | 综合判断（与原始证据区分标注）+ 待确认项 | 综合 |
