@@ -22,6 +22,7 @@
 | [docs/20-omnigent.md](docs/20-omnigent.md) | omnigent 的实现、**主要用法**、**特点**、**解决的现实课题**、目标用户 | (a)(b) |
 | [docs/30-comparison.md](docs/30-comparison.md) | **并排对比表** + 差异分析 + 各自面向的用户群体 | (a)(c) |
 | [docs/40-synthesis-and-judgments.md](docs/40-synthesis-and-judgments.md) | 综合判断（与原始证据区分标注）+ 待确认项 | 综合 |
+| [docs/50-enterprise-adoption-zh.md](docs/50-enterprise-adoption-zh.md) | 核心理念、瀑布/敏捷团队改造、企业系统大规模开发 step-by-step 落地方案 | GHO-75 |
 | [docs/90-evidence-index.md](docs/90-evidence-index.md) | Phase 1 证据来源索引（评论 + 关键文件路径清单） | 可追溯 |
 | [docs/omnigent-beginner-guide-zh.md](docs/omnigent-beginner-guide-zh.md) | 面向 IT 零基础用户的 omnigent 使用指南（基于只读研究产出） | 用户指南 |
 
@@ -34,3 +35,4 @@
 - Phase 1：multica / omnigent 两份源码调查 —— **已完成**（见证据索引）。
 - Phase 2：综合 + 初始化研究仓库 —— **本次产出**（草稿）。
 - Phase 3：交叉 review —— 由发起方统一安排，尚未开始。
+- GHO-75：企业大规模开发落地方案 —— **已补充**（见 `docs/50-enterprise-adoption-zh.md`）。
