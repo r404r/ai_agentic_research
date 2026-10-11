@@ -23,6 +23,7 @@
 | [docs/30-comparison.md](docs/30-comparison.md) | **并排对比表** + 差异分析 + 各自面向的用户群体 | (a)(c) |
 | [docs/40-synthesis-and-judgments.md](docs/40-synthesis-and-judgments.md) | 综合判断（与原始证据区分标注）+ 待确认项 | 综合 |
 | [docs/50-enterprise-adoption-zh.md](docs/50-enterprise-adoption-zh.md) | 核心理念、瀑布/敏捷团队改造、企业系统大规模开发 step-by-step 落地方案 | GHO-75 |
+| [docs/60-paseo-dev-workflow-zh.md](docs/60-paseo-dev-workflow-zh.md) | 新研究对象 Paseo 的调研（架构 / 编排 / 安全模型）+ 最佳实践开发流程 | Paseo 调研 |
 | [docs/90-evidence-index.md](docs/90-evidence-index.md) | Phase 1 证据来源索引（评论 + 关键文件路径清单） | 可追溯 |
 | [docs/omnigent-beginner-guide-zh.md](docs/omnigent-beginner-guide-zh.md) | 面向 IT 零基础用户的 omnigent 使用指南（基于只读研究产出） | 用户指南 |
 
