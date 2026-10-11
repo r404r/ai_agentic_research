@@ -4,7 +4,7 @@
 >
 > **证据锚定**：Paseo 仓库提交 `b412374f0c520fbc0470d15d2652b47eea3efef8`（2026-10-11），对应版本 `0.11.2`（`CHANGELOG.md`）。仓库只在会话临时目录中 `git clone --depth 1` 后只读阅读，**未做任何修改、提交或推送**（沿用 [`AGENTS.md`](../AGENTS.md) 对研究对象的只读铁则）。下文 `path` 均为 Paseo 仓库内路径。
 >
-> **标注约定**：「**证据**」= 直接来自 Paseo 仓库文件；「**综合判断**」= 本研究的推断，附置信度（高 ≥80% / 中 50–80% / 低 20–50%）。最佳实践流程（§4）整体属于综合判断：它由官方文档的推荐用法加上本研究对风险的补强组成，补强部分逐条标出。
+> **标注约定**：「**证据**」= 直接来自 Paseo 仓库文件；「**综合判断**」= 本研究的推断，附置信度（高 ≥80% / 中 50–80% / 低 20–50%）。最佳实践流程（§4）和推荐配置（§5）整体属于综合判断：它由官方文档的推荐用法加上本研究对风险的补强组成，补强部分逐条标出。
 
 ## 0. 一句话结论
 
@@ -204,7 +204,63 @@ flowchart LR
   - 保护 `.paseo` 配置所在分支的推送权限；
   - `hub.execute` 可以修改 provider 权限模式（包括跳过审批），它不是隔离边界。
 
-## 5. 与本仓库既有研究对象的定位关系（综合判断，低–中）
+## 5. 推荐配置：Claude + Codex + Gemini 订阅（综合判断）
+
+> 场景：用户持有 Claude、Codex（ChatGPT）、Gemini 三家订阅，在手机 App 的 **Settings → your host → Agents** 页面配置。界面项以用户截图为准（2026-10-11），行为依据为下列源码 / 文档；**未在真机上验证**。
+
+### 5.1 Agents 页开关
+
+| 设置项 | 建议 | 依据 / 理由 |
+| --- | --- | --- |
+| **Enable Paseo tools** | 开启 | **证据**：开启后 agent 才能拿到 `create_agent` / `list_profiles` 等 MCP 工具，子 agent 完成时通知父 agent，并进入 Subagents track（`public-docs/orchestration.md` "Get started"、`skills/paseo/SKILL.md` "Waiting"）。**证据**：工具目录"不是安全边界"，有 shell 的 agent 本来就能调 `paseo` CLI（`public-docs/mcp.md:65-73`）。**综合判断（高）**：关闭它防不住风险，只会让编排变差；真正的代价是配额（R4）。 |
+| **Browser tools** | **默认关闭**；做前端时在桌面端临时开启 | **证据**：开关说明为"可访问并控制 Paseo 浏览器标签页，包括已登录的浏览器状态，只对信任的 agent 开启"（用户截图）；按 host 开启，不分 agent（`public-docs/browser.md` "Enabling"）；内置浏览器目前仅桌面端可用（`public-docs/browser-when.md`）。**综合判断（中）**：网页内容中的注入指令可能驱动 agent 在已登录会话里行动；只在手机上用时，开着没有收益只有暴露面。 |
+| **System prompt** | 写 5 行左右的跨厂商底线规则（见 5.3） | **证据**：daemon 配置项 `appendSystemPrompt` 追加到所有 agent 的系统提示（`packages/protocol/src/messages.ts:205`；界面说明 "Adds a system prompt to all agents"，`packages/app/src/i18n/resources/en.ts:2651`）。**综合判断（高）**：评审 / 分析 agent 也会收到，所以只放通用底线；项目规则写进仓库的 `AGENTS.md` / `CLAUDE.md`。 |
+| **Orchestration skills** | 保持已安装，确认四个都勾选 | **证据**：`/paseo`、`/paseo-handoff`、`/paseo-committee`、`/paseo-advisor`（`public-docs/skills.md`）。 |
+| **Agent profiles** | 新建 5 个（见 5.2） | **证据**：handoff / committee / advisor skill 规定派工前必须先 `list_profiles` 并读 notes；没有合适的档案才退回 provider 发现（`skills/paseo-handoff/SKILL.md` "Prerequisites"、`skills/paseo/SKILL.md` "Agent profiles and provider discovery"）。 |
+
+### 5.2 Agent profiles
+
+核心原则：**写代码和评审用不同厂商的模型**；三家订阅提供三个互相独立的视角（综合判断，中）。
+
+| 档案 | Provider / 模式 | When to use（直接填写） |
+| --- | --- | --- |
+| **Plan** | Claude 最高档模型，**Plan Mode**，思考程度最高 | `Use for architecture, root-cause analysis, comparing approaches, writing acceptance criteria. Analysis only.` |
+| **Implement** | Codex（GPT-5.5 级），**Default Permissions**（模式 ID `auto`），Plan 开关关闭，速度 Normal | `Use for implementing a well-specified task with acceptance criteria in its own worktree; must run the project's test/lint scripts and report exit codes.` |
+| **Implement-UI** | Claude Sonnet 级，**Accept File Edits** | `Use for components, layout, styling, and visual polish.` |
+| **Review** | **Gemini CLI（ACP）**，选最保守的审批模式 | `Use for independent review of a diff: correctness, missing tests, unnecessary complexity. Never edit files.` |
+| **Second opinion** | Codex 最高推理档，**打开 Plan 开关** | `Use as committee/advisor member contrasting with Claude; analysis only.` |
+
+依据与说明：
+
+- **证据**：Claude 可选模式为 Plan / Always Ask / Accept File Edits / Auto / Bypass（`packages/server/src/server/agent/providers/claude/agent.ts:337-363`）；Codex 为 Default Permissions（默认）/ Auto-review / Full Access（`codex-app-server-agent.ts:244-263`），另有 Plan 开关与速度档（`codex-feature-definitions.ts:32`）。
+- **综合判断（中）**：让 Codex 写代码，是因为它的默认模式本身带写入范围限制，比 Claude 的 Accept File Edits 多一层防护。这是风险权衡，**没有三家模型的能力对比数据支撑**。
+- **证据**：模型名以选择器实际列出的为准；Paseo README 示例为 `claude/opus-4.6`、`codex/gpt-5.5`（`README.md` "CLI"）。
+- **Gemini 一定走 Gemini CLI（ACP 目录一键安装，再在 daemon 主机上运行一次 `gemini` 登录），不要选 Antigravity。**
+  - **证据**：Antigravity 在 Paseo 中只能以 Full access 运行（带 `--dangerously-skip-permissions`），且用不了 Paseo MCP 工具（`public-docs/supported-providers.md` "Antigravity"）。
+  - **证据**：Gemini CLI 在 ACP 目录中（`public-docs/supported-providers.md:82`）；ACP 适配器支持 MCP server 和动态模式（`acp-agent.ts:272-273`）；手动配置示例为 `"command": ["gemini", "--acp"]`（`public-docs/custom-providers.md`）。
+  - **未确认**：Gemini CLI 的审批模式列表在运行时由 CLI 上报，本次未查证（见 §7 第 5 条）。
+- **所有档案都不要用**：Claude Bypass、Codex Full Access、Gemini YOLO。只有 daemon 跑在容器 / VM 里时才考虑（综合判断，高；依据 R1）。
+
+### 5.3 System prompt 建议文本
+
+用英文写，三家模型都能稳定遵循：
+
+```text
+- Never push to main/master, force-push, or rewrite shared history.
+- "Done" means the project's test/lint/typecheck commands pass; report the exact commands and exit codes.
+- Stay inside your workspace directory; do not touch files or credentials outside it.
+- If you were launched for review, analysis, or advice, do not edit, create, or delete files.
+- When the task is ambiguous or needs a destructive action, stop and ask instead of guessing.
+```
+
+控制在 5 行左右：它占用每个 agent 每一轮的上下文，并与各厂商自带的系统提示叠加（综合判断，中）。
+
+### 5.4 补充提醒
+
+- **配额**：committee 同时开两个高推理模型，单次可跑 15–30 分钟（`skills/paseo-committee/SKILL.md` "Hard rules"）；用侧边栏底部的 Usage 面板盯配额（`CHANGELOG.md` 0.11.0）。
+- **档案按 host 保存**（`public-docs/agent-profiles.md` "Create a profile"）：多台机器跑 daemon 时每台都要配。
+
+## 6. 与本仓库既有研究对象的定位关系（综合判断，低–中）
 
 > 以下比较依据本仓库 [10](10-multica.md) / [20](20-omnigent.md) / [30](30-comparison.md) 的既有结论（锚定 2026-06 的提交），**未针对 multica / omnigent 的最新版本重新核验**。
 
@@ -219,14 +275,15 @@ flowchart LR
 
 - **判断**：Paseo 更接近 omnigent 的"统一运行层"定位（都是包装多种 agent 的个人 / 会话级环境），Hub 则伸向 multica 的"事件触发团队自动化"领域。它最明显的短板在**调用级治理**：没有类似 omnigent 的 policy / guardrails，把安全完全交给 provider 原生模式和宿主机边界（置信度：中，依据为 `docs/permissions.md` 与 `public-docs/hub/security.md` 的明确表述）。
 
-## 6. 待确认项
+## 7. 待确认项
 
 1. Agent profile 是否支持为 Review 档强制只读（Paseo 层面），还是只能依赖 provider 原生的 mode/sandbox 选项？本次只看到 profile 可保存 mode/feature 设置（`public-docs/agent-profiles.md`），未验证运行时强制力。
 2. 并行 subagent 的配额消耗与 Usage 面板的准确性未实测（R4）。
 3. 未实际安装运行 Paseo；本文全部基于文档和源码阅读，没有行为验证。
-4. multica / omnigent 对照（§5）需在两者最新提交上复核。
+4. multica / omnigent 对照（§6）需在两者最新提交上复核。
+5. Gemini CLI 经 ACP 接入后上报的审批模式列表，以及最保守模式是否真正只读（§5.2），未查证。
 
-## 7. 证据索引
+## 8. 证据索引
 
 | 主题 | Paseo 路径（提交 `b412374f`） |
 | --- | --- |
@@ -238,6 +295,7 @@ flowchart LR
 | 定时 / heartbeat | `public-docs/schedules.md` |
 | CLI 细节（permit / mode / wait / 循环示例） | `public-docs/cli.md:285-337`、`:449-478` |
 | 安全 / 权限 | `public-docs/security.md`、`docs/permissions.md`、`public-docs/supported-providers.md:29-30`、`public-docs/mcp.md:65-73`、`public-docs/hub/triggers/index.md:39` |
+| Agents 设置 / 各 provider 模式 | `packages/server/src/server/agent/providers/claude/agent.ts:337-363`、`codex-app-server-agent.ts:244-263`、`codex-feature-definitions.ts:32`、`acp-agent.ts:272-273`、`packages/protocol/src/messages.ts:205`、`packages/app/src/i18n/resources/en.ts:2646-2651`、`public-docs/browser.md`、`public-docs/browser-when.md`、`public-docs/custom-providers.md` |
 | Hub | `public-docs/hub/index.md`、`public-docs/hub/concepts.md`、`public-docs/hub/workflows.md`、`public-docs/hub/security.md` |
 | 版本 / 许可 | `CHANGELOG.md`（0.11.2，2026-10-09）、`LICENSE`（Apache-2.0） |
 
