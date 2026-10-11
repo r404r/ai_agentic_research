@@ -216,30 +216,94 @@ flowchart LR
 | **Browser tools** | **默认关闭**；做前端时在桌面端临时开启 | **证据**：开关说明为"可访问并控制 Paseo 浏览器标签页，包括已登录的浏览器状态，只对信任的 agent 开启"（用户截图）；按 host 开启，不分 agent（`public-docs/browser.md` "Enabling"）；内置浏览器目前仅桌面端可用（`public-docs/browser-when.md`）。**综合判断（中）**：网页内容中的注入指令可能驱动 agent 在已登录会话里行动；只在手机上用时，开着没有收益只有暴露面。 |
 | **System prompt** | 写 5 行左右的跨厂商底线规则（见 5.3） | **证据**：daemon 配置项 `appendSystemPrompt` 追加到所有 agent 的系统提示（`packages/protocol/src/messages.ts:205`；界面说明 "Adds a system prompt to all agents"，`packages/app/src/i18n/resources/en.ts:2651`）。**综合判断（高）**：评审 / 分析 agent 也会收到，所以只放通用底线；项目规则写进仓库的 `AGENTS.md` / `CLAUDE.md`。 |
 | **Orchestration skills** | 保持已安装，确认四个都勾选 | **证据**：`/paseo`、`/paseo-handoff`、`/paseo-committee`、`/paseo-advisor`（`public-docs/skills.md`）。 |
-| **Agent profiles** | 新建 5 个（见 5.2） | **证据**：handoff / committee / advisor skill 规定派工前必须先 `list_profiles` 并读 notes；没有合适的档案才退回 provider 发现（`skills/paseo-handoff/SKILL.md` "Prerequisites"、`skills/paseo/SKILL.md` "Agent profiles and provider discovery"）。 |
+| **Agent profiles** | 新建 6 个（见 5.2） | **证据**：handoff / committee / advisor skill 规定派工前必须先 `list_profiles` 并读 notes；没有合适的档案才退回 provider 发现（`skills/paseo-handoff/SKILL.md` "Prerequisites"、`skills/paseo/SKILL.md` "Agent profiles and provider discovery"）。 |
 
 ### 5.2 Agent profiles
 
-核心原则：**写代码和评审用不同厂商的模型**；三家订阅提供三个互相独立的视角（综合判断，中）。
+> 本节为第二版（2026-10-11 修订）：实现改为 Codex `gpt-6.1-sol`，默认评审改为 Claude Opus，Gemini 降为第二评审 / 仲裁；第一版"Review = Gemini"的建议被替换。修订依据是重新权衡额度分配与三家订阅的分工，**不是新的能力对比证据**。
 
-| 档案 | Provider / 模式 | When to use（直接填写） |
+#### 原则（综合判断）
+
+1. **写代码和评审用不同厂商的模型**（中）：不同厂商模型的盲点重叠较少。
+2. **Sol 做默认实现者**（中）：Sol 的定位是便宜，承担大量实现工作；Opus 的额度留给规划和评审这类最吃推理的环节。依据见下方证据。
+3. **评审按验收标准审，不按方案推理审**（中）：`Plan-Opus` 和 `Review-Opus` 是同一模型，同一任务由 Opus 规划又由 Opus 评审时，评审容易拿"自己的方案"当标准。缓解办法：评审 briefing 只给验收标准和 diff；大任务的规划用 `/paseo-committee` 拉上 `Advisor-Codex`。
+4. **命名**（中）：角色在前、厂商在后，用连字符、不加空格（如 `Implement-Codex`）。档案名是自由字符串，Paseo 不做校验（`packages/protocol/src/agent-profile.ts:12-27`），但人和 agent 都要按名字引用档案，档案说明之间也互相引用；`·` 在手机键盘上难输入、容易出现变体，导致对不上。
+
+#### 总览
+
+| 档案名 | Provider / Model | Mode | 思考 / 推理 | 其他开关 | 角色 |
+| --- | --- | --- | --- | --- | --- |
+| `Plan-Opus` | Claude / Opus | Plan Mode | 最高档 | — | 规划、根因分析 |
+| `Implement-Codex` | Codex / `gpt-6.1-sol` | Default Permissions | medium（难题调 high） | Plan 关闭，速度 Normal | **默认实现者** |
+| `Implement-UI` | Claude / Sonnet | Accept File Edits | 中档 | — | UI 打磨 |
+| `Review-Opus` | Claude / Opus | Plan Mode | 高档 | — | **默认评审** |
+| `Review-Gemini` | Gemini CLI（ACP） | 最保守的审批模式 | 默认 | — | 第二评审 / 仲裁 |
+| `Advisor-Codex` | Codex / `gpt-6.1-sol` | Default Permissions | 最高档 | **Plan 打开**，速度 Normal | 第二意见、committee 成员 |
+
+各档的思考 / 推理档位是按职责做的主观分配（综合判断，低–中），具体档位名称以选择器为准。
+
+#### 谁实现，谁评审
+
+| 实现者 | 默认评审 | 什么时候加 `Review-Gemini` |
 | --- | --- | --- |
-| **Plan** | Claude 最高档模型，**Plan Mode**，思考程度最高 | `Use for architecture, root-cause analysis, comparing approaches, writing acceptance criteria. Analysis only.` |
-| **Implement** | Codex（GPT-5.5 级），**Default Permissions**（模式 ID `auto`），Plan 开关关闭，速度 Normal | `Use for implementing a well-specified task with acceptance criteria in its own worktree; must run the project's test/lint scripts and report exit codes.` |
-| **Implement-UI** | Claude Sonnet 级，**Accept File Edits** | `Use for components, layout, styling, and visual polish.` |
-| **Review** | **Gemini CLI（ACP）**，选最保守的审批模式 | `Use for independent review of a diff: correctness, missing tests, unnecessary complexity. Never edit files.` |
-| **Second opinion** | Codex 最高推理档，**打开 Plan 开关** | `Use as committee/advisor member contrasting with Claude; analysis only.` |
+| `Implement-Codex` | `Review-Opus` | 高风险改动（auth、支付、数据迁移、安全边界），或评审与实现者有阻断级分歧 |
+| `Implement-UI` | `Review-Gemini` | 始终由它评审，因为实现者是 Claude |
 
-依据与说明：
+#### 逐档 When to use（直接填写）
 
-- **证据**：Claude 可选模式为 Plan / Always Ask / Accept File Edits / Auto / Bypass（`packages/server/src/server/agent/providers/claude/agent.ts:337-363`）；Codex 为 Default Permissions（默认）/ Auto-review / Full Access（`codex-app-server-agent.ts:244-263`），另有 Plan 开关与速度档（`codex-feature-definitions.ts:32`）。
-- **综合判断（中）**：让 Codex 写代码，是因为它的默认模式本身带写入范围限制，比 Claude 的 Accept File Edits 多一层防护。这是风险权衡，**没有三家模型的能力对比数据支撑**。
-- **证据**：模型名以选择器实际列出的为准；Paseo README 示例为 `claude/opus-4.6`、`codex/gpt-5.5`（`README.md` "CLI"）。
-- **Gemini 一定走 Gemini CLI（ACP 目录一键安装，再在 daemon 主机上运行一次 `gemini` 登录），不要选 Antigravity。**
+**`Plan-Opus`**：Claude，Opus，**Plan Mode**，思考程度最高
+
+```text
+Use for architecture, root-cause analysis, comparing implementation approaches, and writing acceptance criteria that can be checked by commands. Analysis only: do not edit, create, or delete files. For large or high-risk tasks, run /paseo-committee with Advisor-Codex so the plan is not a single model's view.
+```
+
+**`Implement-Codex`**：Codex，`gpt-6.1-sol`，**Default Permissions**，推理 medium，Plan 关闭，速度 Normal
+
+```text
+Default implementer. Use for tasks with written acceptance criteria that can be checked by commands (tests, lint, typecheck): features with a clear spec, bug fixes with a reproduction, refactors, test writing, mechanical multi-file changes. Work in its own worktree, run the project's checks, and report the exact commands and exit codes. Send the finished diff to Review-Opus.
+```
+
+**`Implement-UI`**：Claude，Sonnet，**Accept File Edits**，思考程度中档
+
+```text
+Use for components, layout, styling, and visual polish where the acceptance criteria are visual. Work in its own worktree, start the dev service, and verify the change in the browser with concrete steps and a screenshot. Send the finished diff to Review-Gemini, not to a Claude reviewer.
+```
+
+前提：浏览器自检需要在**桌面端**开启 Browser tools（见 5.1）；不开启时删掉浏览器验证那句，改由人在浏览器里检查。
+
+**`Review-Opus`**：Claude，Opus，**Plan Mode**，思考程度高档
+
+```text
+Default reviewer for diffs written by Codex/OpenAI implementers. Use for independent review of a finished diff in its workspace: correctness, edge cases, missing or weak tests, security issues, unnecessary complexity, and deviations from the acceptance criteria. Judge the diff against the acceptance criteria, not against the plan's reasoning. Analysis only: do not edit, create, or delete files. Return findings ranked blocking / non-blocking with file:line references. Do not use for code written by a Claude profile; use Review-Gemini instead.
+```
+
+Plan Mode 下评审不能自己跑测试；测试是否通过由实现者报告的命令和退出码以及 CI 判定（综合判断，高）。
+
+**`Review-Gemini`**：Gemini CLI（ACP 目录安装，并在 daemon 主机上执行一次 `gemini` 登录），审批模式选最保守的
+
+```text
+Second reviewer and tie-breaker. Use when (a) the code was written by a Claude profile, (b) Review-Opus and the Codex implementer disagree on a blocking finding, or (c) the change touches high-risk areas (auth, payments, data migrations, security boundaries) and needs a second independent review. Analysis only: do not edit, create, or delete files. Return findings ranked blocking / non-blocking with file:line references.
+```
+
+**`Advisor-Codex`**：Codex，`gpt-6.1-sol`，**Default Permissions**，推理最高档，**Plan 开关打开**，速度 Normal
+
+```text
+Use for a second opinion that contrasts with Claude: as the second member of /paseo-committee, or with /paseo-advisor on a design, migration plan, or hard bug. Analysis only: do not edit, create, or delete files. Give a recommendation with reasoning and name what the other analysis may have missed.
+```
+
+#### 依据与说明
+
+- **证据**：Claude 可选模式为 Plan / Always Ask / Accept File Edits / Auto / Bypass，其中 Plan Mode 描述为"Analyze the codebase without executing tools or edits"（`packages/server/src/server/agent/providers/claude/agent.ts:337-363`）；Codex 为 Default Permissions（默认，ID `auto`）/ Auto-review / Full Access（`codex-app-server-agent.ts:244-263`），另有 Plan 开关与速度档，速度档说明为"Faster tiers increase usage"（`codex-feature-definitions.ts`）。
+- **证据**：Paseo 已支持 `gpt-6.1-sol`、`gpt-6-sol`、`gpt-6-astra` 等模型及 Normal / Fast / Ultrafast 速度档（`codex-app-server-agent.features.test.ts:22-33,136-170`，测试夹具）。
+- **外部来源（二手媒体转述 OpenAI 说法，未独立验证）**：GPT-6.1 Sol 于 2026-09-29 DevDay 发布，定位在旗舰 GPT-6 Astra 之下，OpenAI 称其 agentic 编码接近 Astra、价格明显更低（[unite.ai](https://www.unite.ai/openai-unveils-gpt-6.1-sol-at-devday-with-new-codex-and-chatgpt-tools/)、[propakistani](https://propakistani.pk/2026/09/30/gpt-6-1-sol-brings-astra-level-performance-at-5x-lower-cost/)、[flaviocopes](https://flaviocopes.com/gpt-6-1-sol/)）。
+- **未知**：Sol 与 Opus、Gemini 在实现 / 评审任务上的相对能力，本研究没有对比数据；上述分工依据的是额度、权限模型和评审独立性。
+- **综合判断（中）**：Codex 默认模式本身带写入范围限制，范围内的修改不用逐条批准；Claude 的 Accept File Edits 只自动批准文件修改，shell 命令仍需批准，手机上会频繁弹审批。
+- **Gemini 一定走 Gemini CLI（ACP），不要选 Antigravity。**
   - **证据**：Antigravity 在 Paseo 中只能以 Full access 运行（带 `--dangerously-skip-permissions`），且用不了 Paseo MCP 工具（`public-docs/supported-providers.md` "Antigravity"）。
   - **证据**：Gemini CLI 在 ACP 目录中（`public-docs/supported-providers.md:82`）；ACP 适配器支持 MCP server 和动态模式（`acp-agent.ts:272-273`）；手动配置示例为 `"command": ["gemini", "--acp"]`（`public-docs/custom-providers.md`）。
   - **未确认**：Gemini CLI 的审批模式列表在运行时由 CLI 上报，本次未查证（见 §7 第 5 条）。
 - **所有档案都不要用**：Claude Bypass、Codex Full Access、Gemini YOLO。只有 daemon 跑在容器 / VM 里时才考虑（综合判断，高；依据 R1）。
+- **证据**：改档案只影响以后的选择，不更新已在运行的 agent（`public-docs/agent-profiles.md` "Apply settings in one click"）。
 
 ### 5.3 System prompt 建议文本
 
@@ -282,6 +346,7 @@ flowchart LR
 3. 未实际安装运行 Paseo；本文全部基于文档和源码阅读，没有行为验证。
 4. multica / omnigent 对照（§6）需在两者最新提交上复核。
 5. Gemini CLI 经 ACP 接入后上报的审批模式列表，以及最保守模式是否真正只读（§5.2），未查证。
+6. `Advisor-Codex` 用 Sol 还是旗舰 `gpt-6-astra` 更合适（§5.2）：第二意见更看重推理深度，但没有两者在分析任务上的对比数据；各档思考 / 推理档位也需按实际效果调整。
 
 ## 8. 证据索引
 
@@ -295,7 +360,7 @@ flowchart LR
 | 定时 / heartbeat | `public-docs/schedules.md` |
 | CLI 细节（permit / mode / wait / 循环示例） | `public-docs/cli.md:285-337`、`:449-478` |
 | 安全 / 权限 | `public-docs/security.md`、`docs/permissions.md`、`public-docs/supported-providers.md:29-30`、`public-docs/mcp.md:65-73`、`public-docs/hub/triggers/index.md:39` |
-| Agents 设置 / 各 provider 模式 | `packages/server/src/server/agent/providers/claude/agent.ts:337-363`、`codex-app-server-agent.ts:244-263`、`codex-feature-definitions.ts:32`、`acp-agent.ts:272-273`、`packages/protocol/src/messages.ts:205`、`packages/app/src/i18n/resources/en.ts:2646-2651`、`public-docs/browser.md`、`public-docs/browser-when.md`、`public-docs/custom-providers.md` |
+| Agents 设置 / 各 provider 模式 | `packages/server/src/server/agent/providers/claude/agent.ts:337-363`、`codex-app-server-agent.ts:244-263`、`codex-feature-definitions.ts:32`、`codex-app-server-agent.features.test.ts:22-33,136-170`、`packages/protocol/src/agent-profile.ts:12-27`、`acp-agent.ts:272-273`、`packages/protocol/src/messages.ts:205`、`packages/app/src/i18n/resources/en.ts:2646-2651`、`public-docs/browser.md`、`public-docs/browser-when.md`、`public-docs/custom-providers.md` |
 | Hub | `public-docs/hub/index.md`、`public-docs/hub/concepts.md`、`public-docs/hub/workflows.md`、`public-docs/hub/security.md` |
 | 版本 / 许可 | `CHANGELOG.md`（0.11.2，2026-10-09）、`LICENSE`（Apache-2.0） |
 
