@@ -33,7 +33,22 @@
 
 ## 研究状态
 
-- Phase 1：multica / omnigent 两份源码调查 —— **已完成**（见证据索引）。
-- Phase 2：综合 + 初始化研究仓库 —— **本次产出**（草稿）。
-- Phase 3：交叉 review —— 由发起方统一安排，尚未开始。
-- GHO-75：企业大规模开发落地方案 —— **已补充**（见 `docs/50-enterprise-adoption-zh.md`）。
+> 更新于 2026-10-11，依据本仓库 git 提交历史。
+
+| 阶段 / 任务 | 状态 | 产出与依据 |
+| --- | --- | --- |
+| Phase 1：multica / omnigent 两份源码调查 | **已完成** | 见 [证据索引](docs/90-evidence-index.md)；锚定 multica `241a3582`、omnigent `7a199c94` |
+| Phase 2：综合 + 初始化研究仓库 | **已完成**（2026-06-16） | `docs/00`–`40`、`90`；提交 `b2790ac` |
+| Phase 3：交叉 review | **已完成** | 形成修订清单（M1–M2、N1–N5），见提交 `ff794a7` 的说明；Codex 在 multica `241a3582` 上复核了行号引用 |
+| Phase 4：按 review 修订 | **已完成**（2026-06-16） | 平衡性与证据可复现性修订；提交 `ff794a7` |
+| 术语科普补充 | **已完成**（2026-06-16） | `docs/91-glossary.md`；提交 `54cbf20`、`8a25be7` |
+| GHO-73：只读铁则 + omnigent 新手指南迁移 | **已完成**（2026-06-17） | `AGENTS.md`、`docs/omnigent-beginner-guide-zh.md`；提交 `1cc23a4` |
+| GHO-75：企业大规模开发落地方案 | **已完成**（2026-06-17） | `docs/50-enterprise-adoption-zh.md`；提交 `a04ecaf` |
+| Paseo 调研 + 最佳实践流程 + 推荐配置 + 日常使用流程 | **已完成**（2026-10-11），**未经交叉 review** | `docs/60-paseo-dev-workflow-zh.md`；锚定 Paseo `b412374f`（v0.11.2）；提交 `536e025`–`a51f03d` |
+
+**未关闭事项**
+
+- [docs/40](docs/40-synthesis-and-judgments.md) §2 待确认项 1–3（multica / omnigent 协同关系、omnigent 沙箱实现细节、会话恢复语义）仍未核验。
+- multica / omnigent 的证据锚定在 2026-06 的提交上，两个仓库之后的变化未复核，行号引用可能已经过时。
+- `docs/60` 未经交叉 review，也没有在真机上验证；其待确认项见该文 §7。
+- `docs/50` 没有经过 review 的记录。
