@@ -324,6 +324,114 @@ Use for a second opinion that contrasts with Claude: as the second member of /pa
 - **配额**：committee 同时开两个高推理模型，单次可跑 15–30 分钟（`skills/paseo-committee/SKILL.md` "Hard rules"）；用侧边栏底部的 Usage 面板盯配额（`CHANGELOG.md` 0.11.0）。
 - **档案按 host 保存**（`public-docs/agent-profiles.md` "Create a profile"）：多台机器跑 daemon 时每台都要配。
 
+### 5.5 日常使用流程（以 5.2 的六个档案为例）
+
+> 示例任务："给项目列表加按名称筛选"。界面名称取自官方文档，用户手机 App 的版本可能略有不同；**整套流程未在真机上走过**。
+
+**前提问题：六个档案里没有一个能"派工"。** `Plan-Opus` 和 `Review-Opus` 都是 Plan Mode，Paseo 对这个模式的描述是"Analyze the codebase without executing tools or edits"（`packages/server/src/server/agent/providers/claude/agent.ts:339-342`），因此很可能调不了 `create_agent`、`create_workspace` 等 Paseo 工具（综合判断，中；未实测，见 §7 第 7 条）。解决办法：**同一个主会话先用 Plan Mode 规划，方案定了再切换到 Always Ask 去派工**。Paseo 支持对运行中的 agent 切换模式（`public-docs/cli.md` "Agent modes"、`skills/paseo/SKILL.md` 的 `update_agent`），规划时的上下文得以保留。
+
+#### 第 0 步：开工前检查（只做一次）
+
+1. 仓库已注册为 Project，侧边栏能看到它。
+2. 仓库根目录已提交 `paseo.json`：至少有 `worktree.setup`（安装依赖、复制 `.env`）和 `test` / `lint` 脚本。Paseo 读取的是基线分支上**已提交**的版本（`public-docs/worktrees.md` "paseo.json"）。
+3. 5.2 的六个档案、5.3 的 System prompt、四个 orchestration skill 都已配置。
+4. daemon 所在机器上，`claude`、`codex`、`gemini` 三个命令行工具都已登录。
+5. Paseo tools 已开启；开启后新建的 agent 才拿得到这些工具（`public-docs/orchestration.md` "Get started"）。
+
+#### 第 1 步：开主会话并规划
+
+1. 打开项目，选 `main` 工作区（local 类型，即原来的那份代码）。
+2. 点 **New agent**，在模型选择器的 **Profiles** 里选 `Plan-Opus`。
+3. 发第一条消息：
+
+   ```text
+   我要给项目列表加按名称筛选。请阅读相关代码，给出实现方案，并把验收标准写成可以执行的命令（要跑哪些测试、怎样算通过）。不要改代码。
+   ```
+
+4. 读方案，有问题继续追问。大任务或拿不准的方案，再发：
+
+   ```text
+   /paseo-committee 评估这个方案的风险和替代做法
+   ```
+
+   committee 会拉上 `Advisor-Codex` 各自独立分析，可能跑 15–30 分钟，不用守着（`skills/paseo-committee/SKILL.md` "Hard rules"）。
+
+#### 第 2 步：切换模式，派给实现者
+
+1. 方案定下来后，把主会话的模式从 Plan Mode 切换为 **Always Ask**：在会话的模式选择处切换，或执行 `paseo agent mode <id> default`。
+2. 发消息：
+
+   ```text
+   /paseo-handoff 把上面定好的方案交给 Implement-Codex，在新 worktree（基于 origin/main）实现。briefing 里包含验收标准，要求跑完检查后报告命令和退出码。
+   ```
+
+3. 主会话第一次调用 Paseo 工具时会弹出审批，点批准。
+4. 实现者出现在输入框附近的 **Subagents** 面板里，同时在它自己的工作区里打开一个标签页（`public-docs/orchestration-workflows.md` "Where the work appears"）。
+
+#### 第 3 步：等待
+
+- 不用守着，也不用催。实现者完成、出错或需要审批时，主会话都会收到通知（`skills/paseo/SKILL.md` "Waiting"）。
+- Codex 要做超出权限范围的操作时会弹出审批，可以在手机上处理。
+- 想看进度就问主会话："汇总一下子 agent 的进度，有卡住的告诉我。"（`public-docs/orchestration-workflows.md` "Check, redirect, or continue work"）
+
+#### 第 4 步：自己先看一遍
+
+1. 打开实现者所在的工作区，在 **Changes** 里看 diff。
+2. 核对它报告的命令和退出码；不放心就在该工作区开一个终端，自己跑一遍 `paseo.json` 里的 `test` 脚本。
+3. 有明显问题直接在实现者的标签页里说，它会在原对话里接着改。
+
+#### 第 5 步：独立评审
+
+1. 回到主会话：
+
+   ```text
+   在 Implement-Codex 的工作区里启动 Review-Opus，对照验收标准评审这个 diff，把评审结果带回来。
+   ```
+
+2. 有阻断级问题时：
+
+   ```text
+   把 Review-Opus 指出的阻断问题发给实现者，修完后重跑检查。
+   ```
+
+3. 高风险改动（登录认证、支付、数据迁移等），或评审与实现者意见不一致时，再加一轮：
+
+   ```text
+   启动 Review-Gemini 做第二评审。
+   ```
+
+4. **修复和评审的来回最多 3 轮**，超过就由人介入，或用 committee 做根因分析。这是本研究加的规则（综合判断，中；依据 R2），不是 Paseo 自带的。
+
+#### 第 6 步：提交，开 PR
+
+1. 在实现者的标签页里说：
+
+   ```text
+   提交改动，推送这个分支，开一个 PR，PR 描述里写上验收命令和结果。
+   ```
+
+   5.3 的 System prompt 禁止推送到 `main`，所以它只会推送 worktree 自己的分支。
+2. 合并由人在代码托管平台上完成，让 CI 和分支保护作为最后一道关。Paseo 本身没有合并闸门（见 §4 第 7 步）。
+
+#### 第 7 步：合并后清理
+
+- 归档实现者的工作区（或执行 `paseo workspace archive <id>`）。最后一个引用该 worktree 的工作区归档后，Paseo 运行 `teardown` 并删除目录（`public-docs/worktrees.md` "Layout and workflow"）。
+
+#### 常见变体
+
+| 场景 | 与上述流程的区别 |
+| --- | --- |
+| 两个互不相关的任务 | 第 2 步改为"把这两个任务分别交给两个 Implement-Codex，各自用独立 worktree"；之后每个分支分别评审、分别开 PR。 |
+| UI 改动 | 在**桌面端**操作，先开启 Browser tools；实现者用 `Implement-UI`，评审固定用 `Review-Gemini`（实现者是 Claude）。 |
+| 只想听第二意见 | 不派工，直接 `/paseo-advisor --profile Advisor-Codex 这个迁移方案漏了什么？` |
+| 长时间迁移 | 让实现者设置 heartbeat：每 10 分钟小步推进，**2 小时后自动过期**，完成后删除（`public-docs/orchestration-workflows.md` "Keep an agent working with a heartbeat"）。 |
+
+#### 三个最容易出错的地方
+
+1. **在 `main` 工作区里直接让 agent 改代码。** 写代码一律放到新 worktree，`main` 工作区只用来规划和派工。
+2. **agent 说"做完了"就信。** 只认命令的退出码和 CI 结果（§4 第 5 步）。
+3. **同时开太多并行任务。** 并行几路取决于你能认真看完几份 diff（R3）；Opus 评审和 committee 都很耗额度，要盯 Usage 面板（R4）。
+
 ## 6. 与本仓库既有研究对象的定位关系（综合判断，低–中）
 
 > 以下比较依据本仓库 [10](10-multica.md) / [20](20-omnigent.md) / [30](30-comparison.md) 的既有结论（锚定 2026-06 的提交），**未针对 multica / omnigent 的最新版本重新核验**。
@@ -347,6 +455,7 @@ Use for a second opinion that contrasts with Claude: as the second member of /pa
 4. multica / omnigent 对照（§6）需在两者最新提交上复核。
 5. Gemini CLI 经 ACP 接入后上报的审批模式列表，以及最保守模式是否真正只读（§5.2），未查证。
 6. `Advisor-Codex` 用 Sol 还是旗舰 `gpt-6-astra` 更合适（§5.2）：第二意见更看重推理深度，但没有两者在分析任务上的对比数据；各档思考 / 推理档位也需按实际效果调整。
+7. Claude Plan Mode 下的 agent 能否调用 Paseo MCP 工具（§5.5 前提问题）未实测；若能调用，§5.5 第 2 步的模式切换可以省略。
 
 ## 8. 证据索引
 
